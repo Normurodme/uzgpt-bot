@@ -1,39 +1,26 @@
-from aiogram import Bot, Dispatcher, executor, types
+import telebot
 import openai
 import os
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_KEY = os.getenv("OPENAI_KEY")
 
-bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher(bot)
-
+bot = telebot.TeleBot(BOT_TOKEN)
 openai.api_key = OPENAI_KEY
 
+@bot.message_handler(commands=['start'])
+def start(message):
+    bot.reply_to(message, "Salom! 🤖\nSavolingizni yozing.")
 
-@dp.message_handler(commands=['start'])
-async def start_handler(message: types.Message):
-    await message.reply(
-        "Salom! 🤖\n"
-        "Men Uzbek GPT botman.\n\n"
-        "Savolingizni yozing."
-    )
-
-
-@dp.message_handler()
-async def chat_handler(message: types.Message):
+@bot.message_handler(func=lambda m: True)
+def chat(message):
     try:
-        response = openai.ChatCompletion.create(
+        resp = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
-            messages=[
-                {"role": "user", "content": message.text}
-            ]
+            messages=[{"role": "user", "content": message.text}]
         )
-        await message.reply(response.choices[0].message.content)
+        bot.reply_to(message, resp.choices[0].message.content)
+    except:
+        bot.reply_to(message, "Xatolik yuz berdi.")
 
-    except Exception as e:
-        await message.reply("❌ Xatolik yuz berdi. Keyinroq urinib ko‘ring.")
-
-
-if __name__ == "__main__":
-    executor.start_polling(dp, skip_updates=True)
+bot.infinity_polling()
