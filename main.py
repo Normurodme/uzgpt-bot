@@ -1,26 +1,37 @@
-import telebot
-import openai
+from aiogram import Bot, Dispatcher, executor, types
+from openai import OpenAI
 import os
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_KEY = os.getenv("OPENAI_KEY")
 
-bot = telebot.TeleBot(BOT_TOKEN)
-openai.api_key = OPENAI_KEY
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher(bot)
 
-@bot.message_handler(commands=['start'])
-def start(message):
-    bot.reply_to(message, "Salom! 🤖\nSavolingizni yozing.")
+client = OpenAI(api_key=OPENAI_KEY)
 
-@bot.message_handler(func=lambda m: True)
-def chat(message):
+
+@dp.message_handler(commands=['start'])
+async def start_handler(message: types.Message):
+    await message.reply(
+        "Salom! 🤖\nSavolingizni yozing."
+    )
+
+
+@dp.message_handler()
+async def chat_handler(message: types.Message):
     try:
-        resp = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": message.text}]
+            messages=[
+                {"role": "user", "content": message.text}
+            ]
         )
-        bot.reply_to(message, resp.choices[0].message.content)
-    except:
-        bot.reply_to(message, "Xatolik yuz berdi.")
+        await message.reply(response.choices[0].message.content)
 
-bot.infinity_polling()
+    except Exception as e:
+        await message.reply("❌ OpenAI xatosi. Keyinroq urinib ko‘ring.")
+
+
+if __name__ == "__main__":
+    executor.start_polling(dp, skip_updates=True)
